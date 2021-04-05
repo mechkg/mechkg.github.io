@@ -24,7 +24,7 @@ body {
 .cage {
     position: absolute;
     background: url("images/cage.png") no-repeat;
-    background-size: cover;
+    background-size: contain;
 }
 
 .trigger {

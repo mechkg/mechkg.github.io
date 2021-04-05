@@ -4,7 +4,7 @@ const CAGE_HEIGHT = 10;
 const TRIGGER_WIDTH = 5;
 const TRIGGER_HEIGHT = 1;
 class Cage {
-    constructor(cagePosX, cagePosY, triggerPosX, triggerPosY, worldMove) {
+    constructor(cagePosX, cagePosY, triggerPosX, triggerPosY, objectId, worldMove) {
         this.cagePosX = cagePosX;
         this.cagePosY = cagePosY;
         this.triggerPosX = triggerPosX;
@@ -12,6 +12,7 @@ class Cage {
         this.worldMove = worldMove;
         this.ground = false;
         this.triggerDown = false;
+        this.objectId = objectId;
         this.cageVelY = 0;
         this.released = false;
     }
@@ -69,13 +70,16 @@ class Cage {
         this.updateSprites();
     }
     update(dt) {
-        if (this.released && !this.ground) {
+        if (this.released) {
             this.cageVelY += GRAVITY * dt;
-            const moveResult = this.worldMove(new Rect(this.cagePosX, this.cagePosY, CAGE_WIDTH, CAGE_HEIGHT), 0, this.cageVelY * dt);
+            const moveResult = this.worldMove(new Rect(this.cagePosX, this.cagePosY, CAGE_WIDTH, CAGE_HEIGHT), 0, this.cageVelY * dt, this.objectId, true);
             this.cagePosY = moveResult.y;
             if (moveResult.hitGround) {
                 this.cageVelY = 0;
                 this.ground = true;
+            }
+            else {
+                this.ground = false;
             }
             this.updateSprites();
         }
@@ -91,6 +95,9 @@ class Cage {
     }
     isUsed() {
         return this.ground;
+    }
+    getObjectId() {
+        return this.objectId;
     }
 }
 const WORLD_WIDTH = 200;
@@ -112,7 +119,7 @@ let player;
 let lastFrameTime;
 let gameInProgress = true;
 let currentLevel = 0;
-const MAX_LEVEL = 0;
+const MAX_LEVEL = 1;
 function loadLevel(level) {
     let url = window.location.href;
     if (url.indexOf('?') > -1) {
@@ -149,11 +156,12 @@ function gameWon(message) {
         else
             announcement.innerHTML = `${message}<br><span style="font-size: 50%">You beat the game!</span>`;
     }
-    window.addEventListener('keydown', (event) => {
-        if (event.code == 'Space' && !event.repeat) {
-            loadLevel(currentLevel + 1);
-        }
-    });
+    if (currentLevel < MAX_LEVEL)
+        window.addEventListener('keydown', (event) => {
+            if (event.code == 'Space' && !event.repeat) {
+                loadLevel(currentLevel + 1);
+            }
+        });
 }
 function nextFrame(time) {
     if (lastFrameTime === undefined)
@@ -232,7 +240,7 @@ function rectsOverlap(rect1, rect2) {
         (rect1.y + rect1.height) > rect2.y &&
         rect1.y < (rect2.y + rect2.height));
 }
-function worldMoveY(rect, offsetY) {
+function worldMoveY(rect, offsetY, objectId, debug = false) {
     const targetRect = {
         x: rect.x,
         y: rect.y + offsetY,
@@ -240,16 +248,21 @@ function worldMoveY(rect, offsetY) {
         height: rect.height
     };
     for (let i = 0; i < platforms.rects.length; ++i) {
-        if (rectsOverlap(targetRect, platforms.rects[i]))
+        if (rectsOverlap(targetRect, platforms.rects[i])) {
+            if (debug)
+                console.log(JSON.stringify(targetRect));
+            if (debug)
+                console.log(JSON.stringify(platforms.rects[i]));
             return {
                 y: offsetY > 0 ? platforms.rects[i].y - targetRect.height : platforms.rects[i].y + platforms.rects[i].height,
                 hitGround: offsetY > 0,
                 hitCeiling: offsetY <= 0
             };
+        }
     }
     for (let i = 0; i < traps.length; ++i) {
         const trapRect = traps[i].getTrapRect();
-        if (rectsOverlap(targetRect, trapRect))
+        if (traps[i].getObjectId() != objectId && rectsOverlap(targetRect, trapRect))
             return {
                 y: offsetY > 0 ? trapRect.y - targetRect.height : trapRect.y + trapRect.height,
                 hitGround: offsetY > 0,
@@ -262,19 +275,19 @@ function worldMoveY(rect, offsetY) {
         hitCeiling: false
     };
 }
-function worldMoveX(rect, offsetX) {
+function worldMoveX(rect, offsetX, objectId) {
     const targetRect = {
         x: rect.x + offsetX,
         y: rect.y,
         width: rect.width,
         height: rect.height
     };
-    if (offsetX < 0 && targetRect.x < -WORLD_WIDTH / 2)
+    if (offsetX < 0 && targetRect.x < (-WORLD_WIDTH / 2))
         return {
             x: -WORLD_WIDTH / 2,
             hitWall: true
         };
-    if (offsetX > 0 && (targetRect.x + targetRect.width) > WORLD_WIDTH / 2)
+    if (offsetX > 0 && (targetRect.x + targetRect.width) > (WORLD_WIDTH / 2))
         return {
             x: WORLD_WIDTH / 2 - targetRect.width,
             hitWall: true
@@ -288,7 +301,7 @@ function worldMoveX(rect, offsetX) {
     }
     for (let i = 0; i < traps.length; ++i) {
         const trapRect = traps[i].getTrapRect();
-        if (rectsOverlap(targetRect, trapRect))
+        if (traps[i].getObjectId() != objectId && rectsOverlap(targetRect, trapRect))
             return {
                 x: (offsetX > 0) ? trapRect.x - rect.width : trapRect.x + trapRect.width,
                 hitWall: true
@@ -299,9 +312,11 @@ function worldMoveX(rect, offsetX) {
         hitWall: false
     };
 }
-function worldMove(rect, offsetX, offsetY) {
-    const moveXResult = worldMoveX(rect, offsetX);
-    const moveYResult = worldMoveY(new Rect(moveXResult.x, rect.y, rect.width, rect.height), offsetY);
+function worldMove(rect, offsetX, offsetY, objectId = -1, debug = false) {
+    const moveXResult = worldMoveX(rect, offsetX, objectId);
+    if (debug)
+        console.log(moveXResult);
+    const moveYResult = worldMoveY(new Rect(moveXResult.x, rect.y, rect.width, rect.height), offsetY, objectId, debug);
     return {
         x: moveXResult.x,
         y: moveYResult.y,
@@ -317,7 +332,7 @@ function setupLevel0() {
     platforms = new Platforms(platformRects);
     player = new Player(0, 0, worldMove);
     const monster = new Monster(-60, 0, worldMove, player);
-    const cage = new Cage(20, -7, 12, 19.5, worldMove);
+    const cage = new Cage(20, -7, 12, 19.5, 1, worldMove);
     domClients.push(player);
     domClients.push(monster);
     domClients.push(platforms);
@@ -328,17 +343,51 @@ function setupLevel0() {
     traps.push(cage);
     monsters.push(monster);
 }
+function setupLevel1() {
+    const platformRects = [
+        new Rect(-100, 30, 85, 5),
+        new Rect(-25, 35, 30, 5),
+        new Rect(-5, 30, 105, 5),
+        new Rect(0, 10, 105, 5),
+    ];
+    platforms = new Platforms(platformRects);
+    player = new Player(-40, 25, worldMove);
+    const monster1 = new Monster(80, 20, worldMove, player);
+    const monster2 = new Monster(80, 0, worldMove, player);
+    const cage1 = new Cage(-15, -20, -90, 29.5, 1, worldMove);
+    const cage2 = new Cage(20, -20, 20, 9.5, 2, worldMove);
+    domClients.push(player);
+    domClients.push(monster1);
+    domClients.push(monster2);
+    domClients.push(platforms);
+    domClients.push(cage1);
+    domClients.push(cage2);
+    actors.push(player);
+    actors.push(monster1);
+    actors.push(monster2);
+    actors.push(cage1);
+    actors.push(cage2);
+    traps.push(cage1);
+    traps.push(cage2);
+    monsters.push(monster1);
+    monsters.push(monster2);
+}
 window.onload = () => {
     const url = window.location.href;
-    if (url.indexOf('?') > -1) {
+    if (url.indexOf('level=') > -1) {
         let levelStr = url.substr(url.indexOf('level=') + 6);
         currentLevel = parseInt(levelStr);
+        console.log(levelStr);
+        console.log(currentLevel);
         if (isNaN(currentLevel) || currentLevel > MAX_LEVEL)
             currentLevel = 0;
     }
     switch (currentLevel) {
         case 0:
             setupLevel0();
+            break;
+        case 1:
+            setupLevel1();
             break;
     }
     domClients.forEach((c) => c.onLoad());
