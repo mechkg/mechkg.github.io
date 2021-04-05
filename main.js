@@ -94,6 +94,7 @@ class Cage {
     }
 }
 const WORLD_WIDTH = 200;
+const CAGE_CATCH_THRESHOLD = 2;
 class Rect {
     constructor(x, y, width, height) {
         this.x = x;
@@ -174,15 +175,15 @@ function nextFrame(time) {
                 traps[i].triggerPressed();
             else if (traps[i].isTriggerDown())
                 traps[i].triggerReleased();
-            const trapRect = traps[i].getTrapRect();
-            if (rectsOverlap(trapRect, player.getRect()) && traps[i].isActive()) {
+            const trapRect = adjustRect(traps[i].getTrapRect(), CAGE_CATCH_THRESHOLD, 0);
+            if (rectsOverlap(trapRect, player.getRect()) && cageCheckX(player.getRect(), trapRect) && traps[i].isActive()) {
                 player.trapped = true;
                 player.posX = trapRect.x + trapRect.width / 2 - PLAYER_WIDTH / 2;
                 player.posY = trapRect.y + trapRect.height - PLAYER_HEIGHT;
                 gameLost('You trapped yourself 🤦');
             }
             for (let j = 0; j < monsters.length; ++j) {
-                if (rectsOverlap(trapRect, monsters[j].getRect()) && traps[i].isActive()) {
+                if (rectsOverlap(trapRect, monsters[j].getRect()) && cageCheckX(monsters[j].getRect(), trapRect) && traps[i].isActive()) {
                     monsters[j].trapped = true;
                     monsters[j].posX = trapRect.x + trapRect.width / 2 - MONSTER_WIDTH / 2;
                     monsters[j].posY = trapRect.y + trapRect.height - MONSTER_HEIGHT;
@@ -194,8 +195,11 @@ function nextFrame(time) {
             if (!monsters[i].triggered && Math.sqrt(Math.pow(monsters[i].posX - player.posX, 2) + Math.pow(monsters[i].posY - player.posY, 2)) < MONSTER_TRIGGER_RANGE) {
                 monsters[i].trigger();
             }
-            if (rectsOverlap(monsters[i].getRect(), player.getRect()))
+            let monsterRect = adjustRect(monsters[i].getRect(), 1, 1);
+            if (rectsOverlap(monsterRect, player.getRect())) {
+                player.trapped = true;
                 gameLost('Om nom nom nom 👹');
+            }
             if (!monsters[i].trapped)
                 allMonstersTrapped = false;
         }
@@ -207,6 +211,20 @@ function nextFrame(time) {
         lastFrameTime = time;
     }
     requestAnimationFrame(nextFrame);
+}
+function cageCheckX(rect1, rect2) {
+    const leftEdge = (rect1.x < rect2.x) && (((rect1.x + rect1.width) - rect2.x) > CAGE_CATCH_THRESHOLD);
+    const rightEdge = (rect1.x + rect1.width > rect2.x + rect2.width) && (((rect2.x + rect2.width) - rect1.x) > CAGE_CATCH_THRESHOLD);
+    const inside = (rect1.x > rect2.x && rect1.x + rect1.width < rect2.x + rect2.width);
+    return leftEdge || rightEdge || inside;
+}
+function adjustRect(rect, x, y) {
+    return {
+        x: rect.x + x,
+        y: rect.y + y,
+        width: rect.width - 2 * x,
+        height: rect.height - 2 * y
+    };
 }
 function rectsOverlap(rect1, rect2) {
     return ((rect1.x + rect1.width) > rect2.x &&
@@ -231,7 +249,7 @@ function worldMoveY(rect, offsetY) {
     }
     for (let i = 0; i < traps.length; ++i) {
         const trapRect = traps[i].getTrapRect();
-        if (!traps[i].isActive() && rectsOverlap(targetRect, trapRect))
+        if (rectsOverlap(targetRect, trapRect))
             return {
                 y: offsetY > 0 ? trapRect.y - targetRect.height : trapRect.y + trapRect.height,
                 hitGround: offsetY > 0,
@@ -270,7 +288,7 @@ function worldMoveX(rect, offsetX) {
     }
     for (let i = 0; i < traps.length; ++i) {
         const trapRect = traps[i].getTrapRect();
-        if (!traps[i].isActive() && rectsOverlap(targetRect, trapRect))
+        if (rectsOverlap(targetRect, trapRect))
             return {
                 x: (offsetX > 0) ? trapRect.x - rect.width : trapRect.x + trapRect.width,
                 hitWall: true
@@ -299,7 +317,7 @@ function setupLevel0() {
     platforms = new Platforms(platformRects);
     player = new Player(0, 0, worldMove);
     const monster = new Monster(-60, 0, worldMove, player);
-    const cage = new Cage(20, -7, 10, 19.5, worldMove);
+    const cage = new Cage(20, -7, 12, 19.5, worldMove);
     domClients.push(player);
     domClients.push(monster);
     domClients.push(platforms);
