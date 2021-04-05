@@ -1,0 +1,66 @@
+body {
+    background-size: cover;
+    background: linear-gradient(#4072b9, #bfdaed) no-repeat fixed;
+}
+
+.platform {
+    position: absolute;
+    background: url("images/peter-burroughs-stonetexture.jpg");
+    background-size: 75px;
+}
+
+.player {
+    position: absolute;
+    background: url("images/player.png") no-repeat;
+    background-size: cover;
+}
+
+.monster {
+    position: absolute;
+    background: url("images/monster1.png") no-repeat;
+    background-size: cover;
+}
+
+.cage {
+    position: absolute;
+    background: url("images/cage.png") no-repeat;
+    background-size: cover;
+}
+
+.trigger {
+    position: absolute;
+    background: saddlebrown;
+}
+
+.announcement {
+    font-family: sans-serif;
+    display: none;
+    background: snow;
+    padding: 15px;
+    border: 1px solid black;
+    margin: 0;
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    left: 50%;
+    width: 75%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    font-size: 500%;
+    z-index: 1000;
+}
+
+.lost {
+    color: darkred;
+}
+
+.won {
+    color: darkgreen;
+}
+
+.controls {
+    font-family: sans-serif;
+    background: snow;
+    padding: 15px;
+    position: absolute;
+}
