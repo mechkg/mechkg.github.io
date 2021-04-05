@@ -94,7 +94,7 @@ class Cage {
     }
 }
 const WORLD_WIDTH = 200;
-const CAGE_CATCH_THRESHOLD = 2;
+const CAGE_CATCH_THRESHOLD = 1;
 class Rect {
     constructor(x, y, width, height) {
         this.x = x;
