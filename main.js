@@ -544,8 +544,8 @@ const KEY_CODE_RIGHT = 'KeyD';
 const KEY_CODE_JUMP = 'Space';
 const PLAYER_WIDTH = 5 / 1.275;
 const PLAYER_HEIGHT = 5;
-const PLAYER_ACCELERATION_GROUND = 200;
-const PLAYER_FRICTION_COEFF = 5;
+const PLAYER_ACCELERATION_GROUND = 600;
+const PLAYER_FRICTION_COEFF = 15;
 const PLAYER_MAX_SPEED = 10;
 const PLAYER_JUMP_IMPULSE = 60;
 const GRAVITY = 100;
@@ -607,6 +607,9 @@ class Player {
         if (this.ground && this.jumpInput) {
             this.velY -= PLAYER_JUMP_IMPULSE;
             this.ground = false;
+        }
+        if (!this.ground && !this.jumpInput) {
+            this.velY;
         }
         this.velY += GRAVITY * dt;
         const moveResult = this.worldMove(new Rect(this.posX, this.posY, PLAYER_WIDTH, PLAYER_HEIGHT), this.velX * dt, this.velY * dt);
