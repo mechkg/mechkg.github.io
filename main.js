@@ -551,6 +551,8 @@ const PLAYER_JUMP_IMPULSE = 60;
 const GRAVITY = 100;
 class Player {
     constructor(x, y, worldMove) {
+        this.leftDown = false;
+        this.rightDown = false;
         this.posX = x;
         this.posY = y;
         this.worldMove = worldMove;
@@ -569,10 +571,10 @@ class Player {
     }
     onKeyDown(event) {
         if (event.code == KEY_CODE_LEFT && !event.repeat) {
-            this.runInput -= 1;
+            this.leftDown = true;
         }
         if (event.code == KEY_CODE_RIGHT && !event.repeat) {
-            this.runInput += 1;
+            this.rightDown = true;
         }
         if (event.code == KEY_CODE_JUMP && !event.repeat) {
             this.jumpInput = true;
@@ -580,10 +582,10 @@ class Player {
     }
     onKeyUp(event) {
         if (event.code == KEY_CODE_LEFT) {
-            this.runInput += 1;
+            this.leftDown = false;
         }
         if (event.code == KEY_CODE_RIGHT) {
-            this.runInput -= 1;
+            this.rightDown = false;
         }
         if (event.code == KEY_CODE_JUMP) {
             this.jumpInput = false;
@@ -595,6 +597,11 @@ class Player {
             return;
         }
         this.time += dt;
+        this.runInput = 0;
+        if (this.rightDown && !this.leftDown)
+            this.runInput = 1;
+        if (this.leftDown && !this.rightDown)
+            this.runInput = -1;
         this.velX += this.runInput * PLAYER_ACCELERATION_GROUND * dt;
         this.velX -= this.velX * PLAYER_FRICTION_COEFF * dt;
         if (this.ground && this.jumpInput) {
